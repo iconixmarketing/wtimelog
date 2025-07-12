@@ -1,0 +1,13 @@
+body { font-family: Arial, sans-serif; margin: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  th { background-color: #f2f2f2; }
+  .controls { margin-bottom: 20px; }
+  .controls button { margin-right: 10px; padding: 8px 15px; cursor: pointer; }
+  .constraint-check { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+  .constraint-check p { margin: 5px 0; }
+  .constraint-check span.pass { color: green; font-weight: bold; }
+  .constraint-check span.fail { color: red; font-weight: bold; }
+  #generation-status { margin-top: 10px; font-weight: bold; }
+  .success { color: green; }
+  .warning { color: orange; }
