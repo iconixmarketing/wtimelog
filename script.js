@@ -1,30 +1,29 @@
-const dailyTasks = ["Emails", "Scheduling"];
+const ScheduleApp = (() => {
+    const dailyTasks = ["Emails", "Scheduling"];
     const rotatingTasks = [
-        "Meeting Prep / Follow-ups", "Wrike Tasking Updates", "Content Creation", "Digital Strategy",
+        "Meeting Prep / Follow-ups", "Wrike Tasking Updates", "Content Creation",
+        "Digital Strategy",
         "Team Meeting", "Creative Review", "Wrike Tasking", "Campaign Planning",
         "Asset Review", "Approvals & Feedback", "Brainstorming / Concepting",
         "Template Updates", "Mockup / Layout Drafting", "Style Guide Checks",
         "Analytics Check-ins", "Researching"
     ];
-
     const fixedMeetings = {
         "Monday": [["Core Meeting", 60, 100], ["Database Meeting", 35, 75]],
         "Tuesday": [["BEMA Meeting", 20, 40], ["Chase 1:1", 30, 60], ["Ely 1:1", 30, 60]],
         "Wednesday": [["Creative Meeting", 60, 120]],
     };
 
-    // --- Global variable to store the last generated schedule for export ---
     let lastGeneratedSchedule = [];
     let lastWeeklyTotalMinutes = 0;
 
-    // --- Helper Functions ---
     function randRange(min, max, maxConstraint = null) {
         let value;
         let actualMax = maxConstraint !== null ? Math.min(max, maxConstraint) : max;
 
         if (actualMax < min) actualMax = min;
-        
-        if (min === actualMax) { 
+
+        if (min === actualMax) {
             value = min;
         } else {
             do {
@@ -48,15 +47,14 @@ const dailyTasks = ["Emails", "Scheduling"];
         }
     }
 
-    // --- Core Schedule Generation Logic ---
     function generateScheduleLogic() {
         const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
         let schedule = [];
         let weeklyTotalMinutes = 0;
         let dailyTotalsMap = new Map();
 
-        const weekdayMinMinutes = 5 * 60; // 300 minutes
-        const weekdayMaxMinutes = 6 * 60 + 30; // 390 minutes
+        const weekdayMinMinutes = 5 * 60;
+        const weekdayMaxMinutes = 6 * 60 + 30;
 
         for (let day of days) {
             let dayEntries = [];
@@ -67,7 +65,6 @@ const dailyTasks = ["Emails", "Scheduling"];
                 dayEntries.push({ day: day, task: "Live Stream Moderation", duration: dur });
                 currentDayMinutes += dur;
             } else {
-                // 1. Add Fixed Meetings
                 if (fixedMeetings[day]) {
                     for (let [name, min, max] of fixedMeetings[day]) {
                         let dur = randRange(min, max);
@@ -76,7 +73,6 @@ const dailyTasks = ["Emails", "Scheduling"];
                     }
                 }
 
-                // 2. Add Daily Tasks (Emails, Scheduling)
                 const numEmailChunks = randRange(2, 4);
                 for (let i = 0; i < numEmailChunks; i++) {
                     let dur = randRange(10, 30, 90);
@@ -91,7 +87,6 @@ const dailyTasks = ["Emails", "Scheduling"];
                     currentDayMinutes += dur;
                 }
 
-                // 3. Add Initial Rotating Tasks
                 let initialRotatingCount = randRange(5, 9);
                 let availableRotatingTasks = [...rotatingTasks];
                 shuffleArray(availableRotatingTasks);
@@ -108,7 +103,6 @@ const dailyTasks = ["Emails", "Scheduling"];
                     currentDayMinutes += dur;
                 }
 
-                // 4. Adjust Day Total to be within 5h-6h30m (300-390 minutes)
                 let attempts = 0;
                 const maxAttempts = 100;
 
@@ -119,9 +113,9 @@ const dailyTasks = ["Emails", "Scheduling"];
                         let needed = weekdayMinMinutes - currentDayMinutes;
                         let taskPool = [...dailyTasks, ...rotatingTasks];
                         let taskToAdd = taskPool[Math.floor(Math.random() * taskPool.length)];
-                        
+
                         let potentialAddDur = randRange(10, Math.min(50, needed + 20), 90);
-                        
+
                         if (potentialAddDur > 0) {
                             dayEntries.push({ day: day, task: taskToAdd, duration: potentialAddDur });
                             currentDayMinutes += potentialAddDur;
@@ -129,15 +123,15 @@ const dailyTasks = ["Emails", "Scheduling"];
                         }
                     } else if (currentDayMinutes > weekdayMaxMinutes) {
                         let excess = currentDayMinutes - weekdayMaxMinutes;
-                        let removableTasks = dayEntries.filter(e => 
+                        let removableTasks = dayEntries.filter(e =>
                             (dailyTasks.includes(e.task) || rotatingTasks.includes(e.task)) && e.duration >= 10);
-                        
+
                         if (removableTasks.length > 0) {
                             removableTasks.sort((a, b) => Math.abs(a.duration - excess) - Math.abs(b.duration - excess));
                             let taskToAdjust = removableTasks[0];
-                            
+
                             let indexToAdjust = dayEntries.indexOf(taskToAdjust);
-                            
+
                             let reduceAmount = Math.min(taskToAdjust.duration - 10, excess);
                             if (reduceAmount > 0) {
                                 taskToAdjust.duration -= reduceAmount;
@@ -151,21 +145,20 @@ const dailyTasks = ["Emails", "Scheduling"];
                                 }
                             }
                         } else {
-                            break; 
+                            break;
                         }
                     }
                     if (!changed && attempts > 0) break;
                     attempts++;
                 }
 
-                // Final small adjustment if slightly out after attempts
                 if (currentDayMinutes < weekdayMinMinutes) {
                     let needed = weekdayMinMinutes - currentDayMinutes;
                     if (needed > 0) {
                         let task = rotatingTasks[Math.floor(Math.random() * rotatingTasks.length)];
-                        let dur = needed; 
-                        if (dur > 90) dur = 90; 
-                        if (dur < 10 && needed > 0) dur = 10; 
+                        let dur = needed;
+                        if (dur > 90) dur = 90;
+                        if (dur < 10 && needed > 0) dur = 10;
                         if (dur > 0) {
                             dayEntries.push({ day: day, task: task, duration: dur });
                             currentDayMinutes += dur;
@@ -200,18 +193,15 @@ const dailyTasks = ["Emails", "Scheduling"];
         return { schedule, weeklyTotalMinutes, dailyTotalsMap };
     }
 
-    // --- Function to run and display all constraint checks ---
     function checkAllConstraints(schedule, weeklyTotalMinutes, dailyTotalsMap) {
         let allPass = true;
 
-        // 1. Weekly Total
         const weeklyMin = 32 * 60;
         const weeklyMax = 36 * 60;
         if (!(weeklyTotalMinutes >= weeklyMin && weeklyTotalMinutes <= weeklyMax)) {
             allPass = false;
         }
 
-        // 2. Daily Weekday Totals
         const weekdayMin = 5 * 60;
         const weekdayMax = 6 * 60 + 30;
         const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -222,7 +212,6 @@ const dailyTasks = ["Emails", "Scheduling"];
             }
         }
 
-        // 3. Sunday Total & Content
         const sundayMin = 2 * 60;
         const sundayMax = 4 * 60;
         const sundayTotal = dailyTotalsMap.get("Sunday") || 0;
@@ -233,11 +222,10 @@ const dailyTasks = ["Emails", "Scheduling"];
             allPass = false;
         }
 
-        // 4. Max Task Duration (<= 90m for non-fixed)
         let maxTaskDurationPass = true;
         let tasksExceeding90 = [];
         const fixedMeetingNames = Object.values(fixedMeetings).flat().map(fm => fm[0]);
-        fixedMeetingNames.push("Live Stream Moderation"); 
+        fixedMeetingNames.push("Live Stream Moderation");
 
         for (let entry of schedule) {
             if (!fixedMeetingNames.includes(entry.task) && entry.duration > 90) {
@@ -250,17 +238,15 @@ const dailyTasks = ["Emails", "Scheduling"];
         }
         if (!maxTaskDurationPass) allPass = false;
 
-
-        // 5. Daily Task (Emails/Scheduling) Frequency & Duration
         for (let day of weekdays) {
             const dayEntries = schedule.filter(entry => entry.day === day);
-            
+
             const emails = dayEntries.filter(e => e.task === "Emails");
             const scheduling = dayEntries.filter(e => e.task === "Scheduling");
 
             const emailsCountOk = emails.length >= 2 && emails.length <= 4;
             const emailsDurationOk = emails.every(e => e.duration >= 10 && e.duration <= 30);
-            
+
             const schedulingCountOk = scheduling.length >= 2 && scheduling.length <= 4;
             const schedulingDurationOk = scheduling.every(e => e.duration >= 10 && e.duration <= 30);
 
@@ -269,15 +255,14 @@ const dailyTasks = ["Emails", "Scheduling"];
             }
         }
 
-        // 6. Rotating Tasks per Weekday (5-9)
         for (let day of weekdays) {
             const dayEntries = schedule.filter(entry => entry.day === day);
-            const nonFixedNonDailyTasks = dayEntries.filter(e => 
-                !dailyTasks.includes(e.task) && 
+            const nonFixedNonDailyTasks = dayEntries.filter(e =>
+                !dailyTasks.includes(e.task) &&
                 !fixedMeetingNames.includes(e.task)
             );
             const uniqueRotatingTasksCount = new Set(nonFixedNonDailyTasks.map(e => e.task)).size;
-            
+
             if (!(uniqueRotatingTasksCount >= 5 && uniqueRotatingTasksCount <= 9)) {
                 allPass = false;
             }
@@ -286,10 +271,9 @@ const dailyTasks = ["Emails", "Scheduling"];
         return allPass;
     }
 
-    // --- Function to render the schedule table in the HTML ---
     function renderSchedule(schedule, weeklyTotalMinutes) {
-        const tableHtml = [`<table>
-            <tr><th>Day</th><th>Task</th><th>Duration</th></tr>`];
+        const tableHtml = [`<table>`,
+            `<tr><th>Day</th><th>Task</th><th>Duration</th></tr>`];
 
         for (let entry of schedule) {
             tableHtml.push(`<tr><td>${entry.day}</td><td>${entry.task}</td><td>${formatTime(entry.duration)}</td></tr>`);
@@ -299,9 +283,7 @@ const dailyTasks = ["Emails", "Scheduling"];
         document.getElementById("schedule").innerHTML = tableHtml.join("\n");
     }
 
-    // --- Function to update UI with constraint checks results ---
     function runConstraintChecks(schedule, weeklyTotalMinutes, dailyTotalsMap) {
-        // Elements for display
         const weeklyCheckSpan = document.getElementById("check-weekly-total");
         const dailyChecksList = document.getElementById("check-daily-totals");
         const sundayCheckSpan = document.getElementById("check-sunday-total");
@@ -309,21 +291,16 @@ const dailyTasks = ["Emails", "Scheduling"];
         const dailyTasksFrequencyList = document.getElementById("check-daily-tasks-frequency");
         const rotatingTasksCountList = document.getElementById("check-rotating-tasks-count");
 
-        // Clear previous results
         dailyChecksList.innerHTML = '';
         dailyTasksFrequencyList.innerHTML = '';
         rotatingTasksCountList.innerHTML = '';
 
-        // Recalculate values for display in the UI (these are already checked by checkAllConstraints)
-
-        // 1. Weekly Total
         const weeklyMin = 32 * 60;
         const weeklyMax = 36 * 60;
         const weeklyPass = weeklyTotalMinutes >= weeklyMin && weeklyTotalMinutes <= weeklyMax;
         weeklyCheckSpan.textContent = weeklyPass ? "PASS" : "FAIL";
         weeklyCheckSpan.className = weeklyPass ? "pass" : "fail";
 
-        // 2. Daily Weekday Totals
         const weekdayMin = 5 * 60;
         const weekdayMax = 6 * 60 + 30;
         const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -335,7 +312,6 @@ const dailyTasks = ["Emails", "Scheduling"];
             dailyChecksList.appendChild(li);
         }
 
-        // 3. Sunday Total & Content
         const sundayMin = 2 * 60;
         const sundayMax = 4 * 60;
         const sundayTotal = dailyTotalsMap.get("Sunday") || 0;
@@ -346,11 +322,10 @@ const dailyTasks = ["Emails", "Scheduling"];
         sundayCheckSpan.textContent = sundayPass ? "PASS" : "FAIL";
         sundayCheckSpan.className = sundayPass ? "pass" : "fail";
 
-        // 4. Max Task Duration (<= 90m for non-fixed)
         let maxTaskDurationPass = true;
         let tasksExceeding90 = [];
         const fixedMeetingNames = Object.values(fixedMeetings).flat().map(fm => fm[0]);
-        fixedMeetingNames.push("Live Stream Moderation"); 
+        fixedMeetingNames.push("Live Stream Moderation");
 
         for (let entry of schedule) {
             if (!fixedMeetingNames.includes(entry.task) && entry.duration > 90) {
@@ -364,21 +339,17 @@ const dailyTasks = ["Emails", "Scheduling"];
             maxTaskDurationCheckSpan.title = "Tasks exceeding 90m (excluding fixed meetings):\n" + tasksExceeding90.join("\n");
         }
 
-
-        // 5. Daily Task (Emails/Scheduling) Frequency & Duration
         for (let day of weekdays) {
             const dayEntries = schedule.filter(entry => entry.day === day);
-            
+
             const emails = dayEntries.filter(e => e.task === "Emails");
             const scheduling = dayEntries.filter(e => e.task === "Scheduling");
 
             const emailsCountOk = emails.length >= 2 && emails.length <= 4;
             const emailsDurationOk = emails.every(e => e.duration >= 10 && e.duration <= 30);
-            
+
             const schedulingCountOk = scheduling.length >= 2 && scheduling.length <= 4;
             const schedulingDurationOk = scheduling.every(e => e.duration >= 10 && e.duration <= 30);
-
-            const dailyDayPass = emailsCountOk && emailsDurationOk && schedulingCountOk && schedulingDurationOk;
 
             const li = document.createElement('li');
             li.innerHTML = `${day}: Emails Count (${emails.length}): <span class="${emailsCountOk ? 'pass' : 'fail'}">${emailsCountOk ? 'PASS' : 'FAIL'}</span>, Duration: <span class="${emailsDurationOk ? 'pass' : 'fail'}">${emailsDurationOk ? 'PASS' : 'FAIL'}</span><br>
@@ -386,15 +357,14 @@ const dailyTasks = ["Emails", "Scheduling"];
             dailyTasksFrequencyList.appendChild(li);
         }
 
-        // 6. Rotating Tasks per Weekday (5-9)
         for (let day of weekdays) {
             const dayEntries = schedule.filter(entry => entry.day === day);
-            const nonFixedNonDailyTasks = dayEntries.filter(e => 
-                !dailyTasks.includes(e.task) && 
+            const nonFixedNonDailyTasks = dayEntries.filter(e =>
+                !dailyTasks.includes(e.task) &&
                 !fixedMeetingNames.includes(e.task)
             );
             const uniqueRotatingTasksCount = new Set(nonFixedNonDailyTasks.map(e => e.task)).size;
-            
+
             const pass = uniqueRotatingTasksCount >= 5 && uniqueRotatingTasksCount <= 9;
 
             const li = document.createElement('li');
@@ -403,7 +373,6 @@ const dailyTasks = ["Emails", "Scheduling"];
         }
     }
 
-    // --- Function to export the current schedule to CSV ---
     function exportScheduleToCSV() {
         if (lastGeneratedSchedule.length === 0) {
             alert("No schedule generated yet to export!");
@@ -411,46 +380,42 @@ const dailyTasks = ["Emails", "Scheduling"];
         }
 
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Day,Task,Duration\n"; // CSV Header
+        csvContent += "Day,Task,Duration\n";
 
         lastGeneratedSchedule.forEach(entry => {
             const durationFormatted = formatTime(entry.duration);
-            // Basic CSV escaping for task name
             const taskName = entry.task.includes(',') || entry.task.includes('"') ? `"${entry.task.replace(/"/g, '""')}"` : entry.task;
             csvContent += `${entry.day},${taskName},${durationFormatted}\n`;
         });
 
-        // Add the weekly total at the end for context
         csvContent += `\nWeekly Total,,${formatTime(lastWeeklyTotalMinutes)}\n`;
 
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        
-        // Use current date for filename
+
         const now = new Date();
         const fileName = `Work_Schedule_${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.csv`;
 
         link.setAttribute("download", fileName);
-        document.body.appendChild(link); // Required for Firefox
+        document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link); // Clean up
+        document.body.removeChild(link);
     }
 
-    // --- Main function to handle generation loop and display ---
     function generateAndDisplaySchedule() {
         let schedule = [];
         let weeklyTotalMinutes = 0;
         let dailyTotalsMap = new Map();
         let allConstraintsMet = false;
         let attempts = 0;
-        const MAX_GENERATION_ATTEMPTS = 2000; // Cap attempts to prevent infinite loops (you can adjust this)
+        const MAX_GENERATION_ATTEMPTS = 2000;
 
         const statusDiv = document.getElementById("generation-status");
         statusDiv.textContent = 'Generating schedule...';
         statusDiv.className = 'warning';
-        document.getElementById("schedule").innerHTML = ''; // Clear previous schedule
-        document.getElementById("constraintChecks").style.display = 'none'; // Hide checks during generation
+        document.getElementById("schedule").innerHTML = '';
+        document.getElementById("constraintChecks").style.display = 'none';
 
         while (!allConstraintsMet && attempts < MAX_GENERATION_ATTEMPTS) {
             ({ schedule, weeklyTotalMinutes, dailyTotalsMap } = generateScheduleLogic());
@@ -458,13 +423,12 @@ const dailyTasks = ["Emails", "Scheduling"];
             attempts++;
         }
 
-        // Store the successfully generated (or best attempt) schedule globally for export
         lastGeneratedSchedule = schedule;
         lastWeeklyTotalMinutes = weeklyTotalMinutes;
 
         renderSchedule(schedule, weeklyTotalMinutes);
         runConstraintChecks(schedule, weeklyTotalMinutes, dailyTotalsMap);
-        document.getElementById("constraintChecks").style.display = 'block'; 
+        document.getElementById("constraintChecks").style.display = 'block';
 
         if (allConstraintsMet) {
             statusDiv.textContent = `Successfully generated compliant schedule in ${attempts} attempts!`;
@@ -476,3 +440,12 @@ const dailyTasks = ["Emails", "Scheduling"];
             console.warn(`Could not generate a fully compliant schedule after ${MAX_GENERATION_ATTEMPTS} attempts. Displaying best attempt.`);
         }
     }
+
+    return {
+        generateAndDisplaySchedule,
+        exportScheduleToCSV
+    };
+})();
+
+window.generateAndDisplaySchedule = ScheduleApp.generateAndDisplaySchedule;
+window.exportScheduleToCSV = ScheduleApp.exportScheduleToCSV;
