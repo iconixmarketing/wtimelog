@@ -40,6 +40,13 @@ const ScheduleApp = (() => {
         return `${h}:${String(m).padStart(2, '0')}`;
     }
 
+    function formatTimeCompact(minutes) {
+        if (typeof minutes !== 'number' || isNaN(minutes)) return "0h00m";
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${h}h${String(m).padStart(2,'0')}m`;
+    }
+
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -273,13 +280,13 @@ const ScheduleApp = (() => {
 
     function renderSchedule(schedule, weeklyTotalMinutes) {
         const tableHtml = [`<table>`,
-            `<tr><th>Day</th><th>Task</th><th>Duration</th></tr>`];
+            `<tr><th>Day</th><th>Task</th><th>Duration</th><th>Duration (compact)</th></tr>`];
 
         for (let entry of schedule) {
-            tableHtml.push(`<tr><td>${entry.day}</td><td>${entry.task}</td><td>${formatTime(entry.duration)}</td></tr>`);
+            tableHtml.push(`<tr><td>${entry.day}</td><td>${entry.task}</td><td>${formatTime(entry.duration)}</td><td>${formatTimeCompact(entry.duration)}</td></tr>`);
         }
 
-        tableHtml.push(`<tr><th colspan="2">Weekly Total</th><th>${formatTime(weeklyTotalMinutes)}</th></tr></table>`);
+        tableHtml.push(`<tr><th colspan="2">Weekly Total</th><th>${formatTime(weeklyTotalMinutes)}</th><th>${formatTimeCompact(weeklyTotalMinutes)}</th></tr></table>`);
         document.getElementById("schedule").innerHTML = tableHtml.join("\n");
     }
 
@@ -380,15 +387,16 @@ const ScheduleApp = (() => {
         }
 
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Day,Task,Duration\n";
+        csvContent += "Day,Task,Duration,Duration (compact)\n";
 
         lastGeneratedSchedule.forEach(entry => {
             const durationFormatted = formatTime(entry.duration);
+            const durationCompact = formatTimeCompact(entry.duration);
             const taskName = entry.task.includes(',') || entry.task.includes('"') ? `"${entry.task.replace(/"/g, '""')}"` : entry.task;
-            csvContent += `${entry.day},${taskName},${durationFormatted}\n`;
+            csvContent += `${entry.day},${taskName},${durationFormatted},${durationCompact}\n`;
         });
 
-        csvContent += `\nWeekly Total,,${formatTime(lastWeeklyTotalMinutes)}\n`;
+        csvContent += `\nWeekly Total,,${formatTime(lastWeeklyTotalMinutes)},${formatTimeCompact(lastWeeklyTotalMinutes)}\n`;
 
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
